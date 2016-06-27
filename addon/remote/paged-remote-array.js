@@ -57,8 +57,8 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
   },
 
   paramsForBackend: function() {
-    var paramsObj = QueryParamsForBackend.create({page: this.getPage(), 
-                                                  perPage: this.getPerPage(), 
+    var paramsObj = QueryParamsForBackend.create({page: this.getPage(),
+                                                  perPage: this.getPerPage(),
                                                   paramMapping: this.get('paramMapping')});
     var ops = paramsObj.make();
 
@@ -92,14 +92,14 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
 
       me.set("loading",false);
       return me.set("meta", metaObj.make());
-      
+
     }, function(error) {
       Util.log("PagedRemoteArray#fetchContent error " + error);
       me.set("loading",false);
     });
 
     return res;
-  },  
+  },
 
   totalPagesBinding: "meta.total_pages",
 
@@ -125,13 +125,18 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
     }
   }.observes('page','totalPages'),
 
-  setOtherParam: function(k,v) {
+  setOtherParam: function(k, v) {
     if (!this.get('otherParams')) {
-      this.set('otherParams',{});
+      this.set('otherParams', {});
     }
 
     this.get('otherParams')[k] = v;
     this.incrementProperty('paramsForBackendCounter');
-    Ember.run.once(this,"pageChanged");
+
+    if (this.get('page') === 1) {
+      Ember.run.once(this, 'pageChanged');
+    } else {
+      this.set('page', 1);
+    }
   }
 });
