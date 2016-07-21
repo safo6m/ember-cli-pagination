@@ -84,28 +84,36 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
     this.incrementProperty("numRemoteCalls");
     var me = this;
 
-    res.then(function(rows) {
-      var metaObj = ChangeMeta.create({paramMapping: me.get('paramMapping'),
-                                       meta: rows.meta,
-                                       page: me.getPage(),
-                                       perPage: me.getPerPage()});
+    return new Promise(function(resolve, reject) {
+      res.then(function(rows) {
+        var metaObj = ChangeMeta.create({paramMapping: me.get('paramMapping'),
+        meta: rows.meta,
+        page: me.getPage(),
+        perPage: me.getPerPage()});
 
-      me.set("loading",false);
-      return me.set("meta", metaObj.make());
+        me.set("loading",false);
+        resolve(rows);
+        return me.set("meta", metaObj.make());
 
-    }, function(error) {
-      Util.log("PagedRemoteArray#fetchContent error " + error);
-      me.set("loading",false);
+      }, function(error) {
+        Util.log("PagedRemoteArray#fetchContent error " + error);
+        me.set("loading",false);
+        reject(error);
+      });
     });
-
-    return res;
   },
 
   totalPagesBinding: "meta.total_pages",
 
+  getNewContent() {
+    const promise = this.fetchContent();
+    this.set('promise', promise);
+    return promise;
+  },
+
   pageChanged: function() {
-    this.set("promise", this.fetchContent());
-  }.observes("page", "perPage"),
+    this.getNewContent();
+  }.observes('page', 'perPage'),
 
   lockToRange: function() {
     LockToRange.watch(this);
@@ -118,12 +126,12 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
       return;
     }
 
-    this.trigger('pageChanged',page);
+    this.trigger('pageChanged', page);
 
     if (page < 1 || page > totalPages) {
       this.trigger('invalidPage',{page: page, totalPages: totalPages, array: this});
     }
-  }.observes('page','totalPages'),
+  }.observes('page', 'totalPages'),
 
   setOtherParam: function(k, v) {
     if (!this.get('otherParams')) {
@@ -134,9 +142,10 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
     this.incrementProperty('paramsForBackendCounter');
 
     if (this.get('page') === 1) {
-      Ember.run.once(this, 'pageChanged');
+      return this.getNewContent();
     } else {
       this.set('page', 1);
+      return this.get('promise');
     }
   }
 });
