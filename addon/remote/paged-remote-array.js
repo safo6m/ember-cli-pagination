@@ -92,7 +92,7 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
         perPage: me.getPerPage()});
 
         me.set("loading",false);
-        this.trigger('newContentLoaded');
+        me.trigger('newContentLoaded', rows);
         resolve(rows);
         return me.set("meta", metaObj.make());
 
